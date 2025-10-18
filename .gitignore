@@ -2,3 +2,4 @@
 .vscode/
 fedml_env/
 data/CMAPSSData/
+.DS_Store
