@@ -19,7 +19,8 @@ from utils.metrics import MetricsCalculator
 from utils.visualization import ResultsVisualizer
 
 # Import data handling
-from data.preprocess import load_cmapss_data, partition_data
+from data.preprocess import load_cmapss_data
+from data.partition import partition_data
 
 # Import federated components
 from federated.cloud_server import CloudServer
