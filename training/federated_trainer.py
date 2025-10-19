@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 class FederatedTrainer:
     """Orchestrates the complete federated training process"""
     
