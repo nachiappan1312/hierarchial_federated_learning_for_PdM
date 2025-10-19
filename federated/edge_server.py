@@ -1,7 +1,7 @@
-import numpy as np
+# federated/edge_server.py - FIXED VERSION
+
 import torch
-import torch.nn as nn
-from collections import defaultdict
+import numpy as np
 from copy import deepcopy
 
 class EdgeGateway:
@@ -43,16 +43,45 @@ class EdgeGateway:
             total_weighted_samples += weighted_samples
             update['aggregation_weight'] = weighted_samples
         
-        # Step 3: Weighted aggregation
+        # Step 3: Weighted aggregation with proper type handling
         aggregated = {}
         first_weights = filtered_updates[0]['weights']
         
         for key in first_weights.keys():
-            aggregated[key] = torch.zeros_like(first_weights[key])
+            # Initialize with zeros of the same type and shape
+            first_tensor = first_weights[key]
+            aggregated[key] = torch.zeros_like(first_tensor)
             
-            for update in filtered_updates:
-                weight = update['aggregation_weight'] / total_weighted_samples
-                aggregated[key] += update['weights'][key] * weight
+            # Check if this is a parameter that should be aggregated or kept as-is
+            # BatchNorm running stats and num_batches_tracked should not be aggregated
+            if 'num_batches_tracked' in key:
+                # For num_batches_tracked, just take the max
+                max_val = first_tensor.clone()
+                for update in filtered_updates:
+                    if update['weights'][key] > max_val:
+                        max_val = update['weights'][key]
+                aggregated[key] = max_val
+            elif 'running_mean' in key or 'running_var' in key:
+                # For running stats, do weighted average
+                for update in filtered_updates:
+                    weight = update['aggregation_weight'] / total_weighted_samples
+                    aggregated[key] += update['weights'][key].float() * weight
+                # Keep the same dtype as original
+                aggregated[key] = aggregated[key].to(first_tensor.dtype)
+            else:
+                # For regular parameters (weights, biases), do weighted average
+                for update in filtered_updates:
+                    weight = update['aggregation_weight'] / total_weighted_samples
+                    # Ensure both tensors are float for multiplication
+                    param_tensor = update['weights'][key]
+                    if param_tensor.dtype in [torch.long, torch.int]:
+                        param_tensor = param_tensor.float()
+                    
+                    aggregated[key] += param_tensor * weight
+                
+                # Convert back to original dtype if needed
+                if first_tensor.dtype != aggregated[key].dtype:
+                    aggregated[key] = aggregated[key].to(first_tensor.dtype)
         
         # Step 4: Calculate priority weight for cloud aggregation
         # Higher priority for gateways with devices showing degradation
@@ -92,6 +121,10 @@ class EdgeGateway:
         # Statistical outlier detection
         mean_dist = np.mean(distances)
         std_dist = np.std(distances)
+        
+        if std_dist == 0:
+            return device_updates
+        
         threshold = mean_dist + self.outlier_threshold * std_dist
         
         filtered = [
@@ -106,7 +139,15 @@ class EdgeGateway:
         distance = 0.0
         for key in weights1.keys():
             if key in weights2:
-                distance += torch.sum((weights1[key] - weights2[key]) ** 2).item()
+                # Only compare actual parameters, skip running stats and counters
+                if 'num_batches_tracked' not in key:
+                    try:
+                        w1 = weights1[key].float()
+                        w2 = weights2[key].float()
+                        distance += torch.sum((w1 - w2) ** 2).item()
+                    except:
+                        # Skip if conversion fails
+                        continue
         return np.sqrt(distance)
     
     def compress_weights(self, compression_ratio=0.3):
@@ -116,19 +157,42 @@ class EdgeGateway:
         
         compressed = {}
         for key, tensor in self.aggregated_weights.items():
-            # Quantize to int8
-            min_val = tensor.min()
-            max_val = tensor.max()
-            scale = (max_val - min_val) / 255.0
-            
-            quantized = ((tensor - min_val) / scale).round().to(torch.uint8)
-            
-            compressed[key] = {
-                'quantized': quantized,
-                'scale': scale,
-                'min': min_val,
-                'shape': tensor.shape
-            }
+            # Skip compression for integer tensors and counters
+            if tensor.dtype in [torch.long, torch.int] or 'num_batches_tracked' in key:
+                compressed[key] = {
+                    'data': tensor,
+                    'compressed': False
+                }
+            else:
+                # Quantize to int8 for float tensors
+                try:
+                    min_val = tensor.min()
+                    max_val = tensor.max()
+                    
+                    if max_val == min_val:
+                        # Handle constant tensors
+                        compressed[key] = {
+                            'data': tensor,
+                            'compressed': False
+                        }
+                    else:
+                        scale = (max_val - min_val) / 255.0
+                        quantized = ((tensor - min_val) / scale).round().to(torch.uint8)
+                        
+                        compressed[key] = {
+                            'quantized': quantized,
+                            'scale': scale,
+                            'min': min_val,
+                            'shape': tensor.shape,
+                            'dtype': tensor.dtype,
+                            'compressed': True
+                        }
+                except Exception as e:
+                    # If quantization fails, keep original
+                    compressed[key] = {
+                        'data': tensor,
+                        'compressed': False
+                    }
         
         return compressed
     
@@ -136,7 +200,12 @@ class EdgeGateway:
         """Decompress quantized weights"""
         decompressed = {}
         for key, data in compressed.items():
-            quantized = data['quantized'].float()
-            decompressed[key] = quantized * data['scale'] + data['min']
+            if data.get('compressed', False):
+                # Decompress quantized data
+                quantized = data['quantized'].float()
+                decompressed[key] = (quantized * data['scale'] + data['min']).to(data['dtype'])
+            else:
+                # Already uncompressed
+                decompressed[key] = data['data']
+        
         return decompressed
-

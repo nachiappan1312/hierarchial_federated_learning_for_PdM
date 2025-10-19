@@ -1,5 +1,3 @@
-# federated/client.py - FINAL COMPLETE VERSION
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
