@@ -1,0 +1,35 @@
+# test_federated.py
+from federated.client import IoTDevice
+from federated.edge_server import EdgeGateway
+from federated.cloud_server import CloudServer
+import numpy as np
+import torch
+
+def test_federated_components():
+    # Create synthetic data
+    X = np.random.randn(1000, 30, 14)
+    y = np.random.randint(0, 2, 1000)
+    
+    print("Testing IoT Device...")
+    device = IoTDevice(0, X, y, capability_score=0.5, gateway_id=0)
+    print(f"✓ Device created with {len(device.X)} samples")
+    
+    print("\nTesting Edge Gateway...")
+    gateway = EdgeGateway(0)
+    print(f"✓ Gateway created")
+    
+    print("\nTesting Cloud Server...")
+    model_config = {'input_channels': 14, 'num_classes': 2}
+    server = CloudServer(model_config)
+    print(f"✓ Server created with global model")
+    
+    # Test training cycle
+    print("\nTesting training cycle...")
+    global_weights = server.get_global_weights()
+    update = device.train_local_model(global_weights, epochs=1)
+    print(f"✓ Local training complete, loss: {update['loss']:.4f}")
+    
+    print("\nFederated components working correctly!")
+
+if __name__ == "__main__":
+    test_federated_components()
