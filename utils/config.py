@@ -8,16 +8,16 @@ class Config:
     
     # ========== Data Settings ==========
     dataset: str = 'FD003'
-    window_size: int = 30
+    window_size: int = 15
     stride: int = 15
-    degradation_threshold: int = 125
+    degradation_threshold: int = 100
     data_dir: str = 'data/raw'
     
     # ========== Federated Learning Settings ==========
     num_rounds: int = 100
     local_epochs: int = 10
     batch_size: int = 64
-    learning_rate: float = 0.003
+    learning_rate: float = 0.001
     client_participation_rate: float = 1.0
     
     # ========== Architecture Settings ==========

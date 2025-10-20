@@ -179,7 +179,20 @@ def create_windows(df, features, window_size=30, stride=15):
             X.append(window)
             y.append(label)
     
-    X = np.array(X)
+    # Standardize features within each window
+    if len(X) > 0:
+        X = np.array(X)
+        # Per-sensor normalization
+        for sensor_idx in range(X.shape[2]):
+            sensor_data = X[:, :, sensor_idx]
+            mean = sensor_data.mean()
+            std = sensor_data.std()
+            if std > 0:
+                X[:, :, sensor_idx] = (sensor_data - mean) / std
+    else:
+        X = np.array(X)
+
+
     y = np.array(y)
     
     return X, y

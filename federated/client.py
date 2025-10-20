@@ -105,21 +105,26 @@ class IoTDevice:
             thresholds=self._get_thresholds()
         )
         
-        # Adjust pruning based on device capability
-        base_pruning_ratio = self.pruner.get_pruning_ratio(self.health_score)
-        
-        if self.capability_score < 0.4:
-            pruning_ratio = min(base_pruning_ratio * 1.5, 0.7)
-        elif self.capability_score < 0.7:
-            pruning_ratio = base_pruning_ratio
+        if hasattr(self, 'enable_pruning') and self.enable_pruning:
+            # Calculate pruning ratio
+            base_pruning_ratio = self.pruner.get_pruning_ratio(self.health_score)
+            
+            if self.capability_score < 0.4:
+                pruning_ratio = min(base_pruning_ratio * 1.3, 0.5)
+            elif self.capability_score < 0.7:
+                pruning_ratio = base_pruning_ratio
+            else:
+                pruning_ratio = base_pruning_ratio * 0.7
+    
+            # Apply pruning
+            self.model = self.pruner.prune_model(self.model, pruning_ratio)
         else:
-            pruning_ratio = base_pruning_ratio * 0.5
-        
-        # Apply pruning
-        self.model = self.pruner.prune_model(self.model, pruning_ratio)
+            pruning_ratio = 0.0  # No pruning
         
         # Setup training
-        criterion = nn.CrossEntropyLoss()
+        unique_labels, counts = torch.unique(self.y, return_counts=True)
+        class_weights = torch.FloatTensor([counts[1]/counts[0], 1.0])  # Balance classes
+        criterion = nn.CrossEntropyLoss(weight=class_weights)
         optimizer = optim.Adam(self.model.parameters(), lr=lr)
         
         # Adjust batch size and epochs based on capability
@@ -153,6 +158,7 @@ class IoTDevice:
                     outputs = self.model(batch_X)
                     loss = criterion(outputs, batch_y)
                     loss.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                     optimizer.step()
                     batch_losses.append(loss.item())
                 except Exception as e:
@@ -227,7 +233,9 @@ class IoTDevice:
         with torch.no_grad():
             try:
                 outputs = self.model(val_X)
-                criterion = nn.CrossEntropyLoss()
+                unique_labels, counts = torch.unique(self.y, return_counts=True)
+                class_weights = torch.FloatTensor([counts[1]/counts[0], 1.0])  # Balance classes
+                criterion = nn.CrossEntropyLoss(weight=class_weights)
                 val_loss = criterion(outputs, val_y).item()
             except Exception as e:
                 val_loss = 1.0

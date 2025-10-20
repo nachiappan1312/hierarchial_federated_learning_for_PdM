@@ -1,0 +1,20 @@
+{
+  "num_rounds": 10,
+  "local_epochs": 30,
+  "batch_size": 16,
+  "learning_rate": 0.0008,
+  
+  "num_devices": 25,
+  "num_gateways": 5,
+  
+  "heterogeneity_level": "high",
+  "enable_adaptive_pruning": false,
+  "p_max": 0.5,
+  "p_min": 0.1,
+  
+  "enable_priority_weighting": true,
+  "enable_edge_aggregation": true,
+  
+  "run_baselines": true,
+  "run_ablation":true
+}

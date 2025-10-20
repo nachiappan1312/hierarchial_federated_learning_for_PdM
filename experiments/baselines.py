@@ -108,13 +108,47 @@ class StandardFedAvg:
             total_samples = sum(u['num_samples'] for u in device_updates)
             new_weights = {}
             
-            for key in device_updates[0]['weights'].keys():
-                new_weights[key] = torch.zeros_like(
-                    device_updates[0]['weights'][key]
-                )
-                for update in device_updates:
-                    weight = update['num_samples'] / total_samples
-                    new_weights[key] += update['weights'][key] * weight
+            # FIXED: Proper type handling for different tensor types
+            first_weights = device_updates[0]['weights']
+            
+            for key in first_weights.keys():
+                first_tensor = first_weights[key]
+                
+                # Handle different tensor types appropriately
+                if 'num_batches_tracked' in key:
+                    # For num_batches_tracked, take the maximum (it's a counter)
+                    new_weights[key] = first_tensor.clone()
+                    for update in device_updates[1:]:
+                        if update['weights'][key] > new_weights[key]:
+                            new_weights[key] = update['weights'][key]
+                
+                elif 'running_mean' in key or 'running_var' in key:
+                    # For running statistics, do weighted average
+                    new_weights[key] = torch.zeros_like(first_tensor).float()
+                    for update in device_updates:
+                        weight = update['num_samples'] / total_samples
+                        tensor_val = update['weights'][key].float()
+                        new_weights[key] += tensor_val * weight
+                    # Convert back to original dtype
+                    new_weights[key] = new_weights[key].to(first_tensor.dtype)
+                
+                else:
+                    # For regular parameters (weights, biases)
+                    new_weights[key] = torch.zeros_like(first_tensor).float()
+                    
+                    for update in device_updates:
+                        weight = update['num_samples'] / total_samples
+                        param_tensor = update['weights'][key]
+                        
+                        # Ensure float type for arithmetic
+                        if param_tensor.dtype in [torch.long, torch.int]:
+                            param_tensor = param_tensor.float()
+                        
+                        new_weights[key] += param_tensor * weight
+                    
+                    # Maintain original dtype
+                    if first_tensor.dtype != new_weights[key].dtype:
+                        new_weights[key] = new_weights[key].to(first_tensor.dtype)
             
             self.cloud_server.global_model.load_state_dict(new_weights)
             
@@ -133,4 +167,3 @@ class StandardFedAvg:
             results['communication_mb'].append(comm_mb)
         
         return results
-
