@@ -1,0 +1,8 @@
+{
+  "num_rounds": 50,
+  "local_epochs": 10,
+  "learning_rate": 0.003,
+  "num_devices": 25,
+  "enable_adaptive_pruning": false,
+  "run_baselines": false
+}

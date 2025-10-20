@@ -74,25 +74,54 @@ def load_data(config: Config):
         print(f"Could not load NASA C-MAPSS data: {e}")
         print("Generating synthetic data for demonstration...")
         
-        # Generate synthetic data
+        # Generate synthetic data with CONSISTENT dimensions
         np.random.seed(config.random_seed)
         n_train = 10000
         n_test = 2000
+        n_features = 14  # FIXED number of features
         
-        X_train = np.random.randn(n_train, config.window_size, config.input_channels)
+        X_train = np.random.randn(n_train, config.window_size, n_features)
         y_train = np.random.randint(0, config.num_classes, n_train)
-        X_test = np.random.randn(n_test, config.window_size, config.input_channels)
+        X_test = np.random.randn(n_test, config.window_size, n_features)
         y_test = np.random.randint(0, config.num_classes, n_test)
         
         print("✓ Generated synthetic data")
         data_source = "Synthetic"
     
+    # CRITICAL: Verify dimensions match
     print(f"\nData shapes:")
     print(f"  Training:   {X_train.shape}")
     print(f"  Testing:    {X_test.shape}")
-    print(f"  Features:   {config.input_channels}")
+    
+    if X_train.shape[1] != X_test.shape[1]:
+        print(f"⚠️  WARNING: Timestep mismatch!")
+        # Fix it
+        min_time = min(X_train.shape[1], X_test.shape[1])
+        X_train = X_train[:, :min_time, :]
+        X_test = X_test[:, :min_time, :]
+        print(f"  Fixed to: {X_train.shape}, {X_test.shape}")
+    
+    if X_train.shape[2] != X_test.shape[2]:
+        print(f"⚠️  WARNING: Feature mismatch! Train:{X_train.shape[2]}, Test:{X_test.shape[2]}")
+        # Fix it by padding or truncating
+        n_features = X_train.shape[2]
+        if X_test.shape[2] < n_features:
+            # Pad test data
+            padding = np.zeros((X_test.shape[0], X_test.shape[1], n_features - X_test.shape[2]))
+            X_test = np.concatenate([X_test, padding], axis=2)
+            print(f"  Padded test data to: {X_test.shape}")
+        elif X_test.shape[2] > n_features:
+            # Truncate test data
+            X_test = X_test[:, :, :n_features]
+            print(f"  Truncated test data to: {X_test.shape}")
+    
+    print(f"  Features:   {X_train.shape[2]}")
     print(f"  Classes:    {config.num_classes}")
     print(f"  Source:     {data_source}")
+    
+    # Update config with actual dimensions
+    config.input_channels = X_train.shape[2]
+    config.window_size = X_train.shape[1]
     
     return X_train, y_train, X_test, y_test, data_source
 

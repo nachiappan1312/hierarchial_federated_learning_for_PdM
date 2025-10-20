@@ -15,9 +15,9 @@ class Config:
     
     # ========== Federated Learning Settings ==========
     num_rounds: int = 100
-    local_epochs: int = 5
+    local_epochs: int = 10
     batch_size: int = 64
-    learning_rate: float = 0.001
+    learning_rate: float = 0.003
     client_participation_rate: float = 1.0
     
     # ========== Architecture Settings ==========
@@ -34,7 +34,7 @@ class Config:
     capability_distribution: str = 'beta'  # 'beta', 'uniform', 'fixed'
     
     # ========== Adaptive Pruning Settings ==========
-    enable_adaptive_pruning: bool = True
+    enable_adaptive_pruning: bool = False
     p_max: float = 0.6
     p_min: float = 0.1
     pruning_method: str = 'l1_unstructured'  # 'l1_unstructured', 'structured'

@@ -1,0 +1,145 @@
+{
+  "timestamp": "2025-10-20T09:01:03.039770",
+  "config": {
+    "dataset": "FD003",
+    "window_size": 30,
+    "stride": 15,
+    "degradation_threshold": 125,
+    "data_dir": "data/raw",
+    "num_rounds": 10,
+    "local_epochs": 10,
+    "batch_size": 64,
+    "learning_rate": 0.03,
+    "client_participation_rate": 1.0,
+    "num_devices": 50,
+    "num_gateways": 10,
+    "devices_per_gateway": 5,
+    "input_channels": 13,
+    "num_classes": 2,
+    "heterogeneity_level": "high",
+    "capability_distribution": "beta",
+    "enable_adaptive_pruning": false,
+    "p_max": 0.6,
+    "p_min": 0.1,
+    "pruning_method": "l1_unstructured",
+    "enable_priority_weighting": true,
+    "rul_threshold": 50,
+    "priority_strength": 2.0,
+    "enable_edge_aggregation": true,
+    "outlier_threshold": 2.5,
+    "quality_alpha": 1.5,
+    "quality_beta": 2.0,
+    "enable_compression": true,
+    "compression_ratio": 0.3,
+    "lightweight_threshold": 0.4,
+    "medium_threshold": 0.7,
+    "device": "cpu",
+    "random_seed": 42,
+    "validation_split": 0.2,
+    "results_dir": "results",
+    "logs_dir": "logs",
+    "save_models": true,
+    "log_interval": 10,
+    "verbose": true,
+    "run_ablation": false,
+    "run_baselines": false,
+    "save_plots": true
+  },
+  "data_source": "NASA C-MAPSS",
+  "proposed_results": {
+    "round": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "accuracy": [
+      0.3573667711598746,
+      0.3573667711598746,
+      0.3573667711598746,
+      0.6436781609195402,
+      0.6854754440961337,
+      0.6426332288401254,
+      0.6426332288401254,
+      0.6489028213166145,
+      0.6050156739811913,
+      0.5538140020898642
+    ],
+    "f1_score": [
+      0.18817465086478388,
+      0.18817465086478388,
+      0.18817465086478388,
+      0.5052275468640702,
+      0.595373147503762,
+      0.5028237095886476,
+      0.5028237095886476,
+      0.5170732293205539,
+      0.5985135897211732,
+      0.5325149500200925
+    ],
+    "communication_mb": [
+      12.273025512695312,
+      12.273025512695312,
+      12.273025512695312,
+      12.273025512695312,
+      12.273025512695312,
+      12.273025512695312,
+      12.273025512695312,
+      12.273025512695312,
+      12.273025512695312,
+      12.273025512695312
+    ],
+    "train_time": [
+      11.78429102897644,
+      11.11393427848816,
+      11.783204078674316,
+      13.856014966964722,
+      14.349126100540161,
+      15.377225875854492,
+      17.338703155517578,
+      13.702834129333496,
+      14.216611862182617,
+      12.316641092300415
+    ]
+  },
+  "baseline_results": {},
+  "additional_metrics": {
+    "fairness": {
+      "jain_index": 0.9539883952897724,
+      "mean_accuracy": 0.5305435582782184,
+      "std_accuracy": 0.11651536230493903,
+      "min_accuracy": 0.25757575757575757,
+      "max_accuracy": 0.9402985074626866
+    },
+    "communication": {
+      "proposed": {
+        "total_bytes": 386076000.0,
+        "total_mb": 368.1907653808594,
+        "total_gb": 0.3595612943172455,
+        "per_round_mb": 36.81907653808594,
+        "per_device_mb": 7.3638153076171875
+      },
+      "fedavg": {
+        "total_bytes": 1286920000.0,
+        "total_mb": 1227.3025512695312,
+        "total_gb": 1.1985376477241516,
+        "per_round_mb": 122.73025512695312,
+        "per_device_mb": 24.546051025390625
+      },
+      "reduction_percent": 70.0
+    },
+    "convergence": {
+      "converged": true,
+      "convergence_round": 4,
+      "final_accuracy": 0.5538140020898642,
+      "target_accuracy": 0.4984326018808778,
+      "total_rounds": 10
+    }
+  }
+}
